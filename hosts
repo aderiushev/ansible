@@ -1,0 +1,2 @@
+[pediatr]
+198.211.113.140 ansible_ssh_user=deployer
