@@ -1,7 +1,7 @@
 ---
 - hosts: pediatr
   sudo: yes
-
+  strategy: debug
   tasks:
 
   - name: install packages part 1
@@ -41,15 +41,21 @@
   - name: create /var/www/vhosts directory
     file: dest=/var/www/vhosts state=directory owner=www-data group=www-data mode=0770
 
+  - name: start ssh-agent
+    shell: eval $(ssh-agent)
+
   - name: pulling from repo
     git: >
       dest=/var/www/vhosts/pediatr_v2
       repo=git@bitbucket.org:hutsi/pediatr.git
       accept_hostkey=yes
-      key_file="/home/vagrant/.ssh/id_rsa_github"
+      key_file="/home/deployer/.ssh/id_rsa"
+      remote=origin
+      version=master
+      force=yes
 
   - name: run migrations
-    shell: ./yii migrate/up
+    shell: php /var/www/vhosts/pediatr_v2/yii migrate/up
     notify:
       - restart php5-fpm
       - restart nginx
