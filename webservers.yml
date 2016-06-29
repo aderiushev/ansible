@@ -1,0 +1,5 @@
+---
+- hosts: pediatr
+  sudo: yes
+  roles:
+    - common

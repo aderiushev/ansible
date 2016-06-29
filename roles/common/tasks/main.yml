@@ -1,0 +1,58 @@
+---
+
+- name: install packages part 1
+  apt: name={{ item }} update_cache=yes state=latest
+  with_items:
+    - git
+    - mcrypt
+    - nginx
+    - php5-cli
+    - php5-curl
+
+- name: ensure php5-fpm cgi.fix_pathinfo=0
+  lineinfile: dest=/etc/php5/fpm/php.ini regexp='^(.*)cgi.fix_pathinfo=' line=cgi.fix_pathinfo=0
+  notify:
+    - restart php5-fpm
+    - restart nginx
+
+- name: install packages part 2
+  apt: name={{ item }} update_cache=yes state=latest
+  with_items:
+    - php5-fpm
+    - php5-intl
+    - php5-json
+    - php5-sqlite
+    - sqlite3
+
+- name: enable php5 mcrypt module
+  shell: php5enmod mcrypt
+  args:
+    creates: /etc/php5/cli/conf.d/20-mcrypt.ini
+
+- name: install composer
+  shell: curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+  args:
+    creates: /usr/local/bin/composer
+
+- name: create /var/www/vhosts directory
+  file: dest=/var/www/vhosts state=directory owner=www-data group=www-data mode=0770
+
+- name: start ssh-agent
+  shell: eval $(ssh-agent)
+
+- name: pulling from repo
+  git: >
+    dest=/var/www/vhosts/pediatr_v2
+    repo=git@bitbucket.org:hutsi/pediatr.git
+    accept_hostkey=yes
+    key_file="/home/deployer/.ssh/id_rsa"
+    remote=origin
+    version=master
+    force=yes
+
+- name: run migrations
+  shell: php /var/www/vhosts/pediatr_v2/yii migrate/up
+  notify:
+    - restart php5-fpm
+    - restart nginx
+    - restart mysql
